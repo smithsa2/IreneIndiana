@@ -63,6 +63,7 @@ def display(pos):
 
 display(pos)
 while True:
+    print(" =================== ")
     print(DESCRIPTIONS[pos[1]][pos[0]])
     ans = input("> ")
     if ans == 'q':
