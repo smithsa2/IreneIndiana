@@ -18,20 +18,20 @@ while game_menu:
 3) Credits
 4) Help & Tutorials
 5) Quit""")
-    user_input = input("> ").strip().lower()
+    user_input = input("> ").strip().lower() 
     if user_input == '1':
-        pass
+        print("Error: feature not added yet")
     elif user_input == '2':
-        pass
+        print("No current game")
     elif user_input == '3':
-        pass
+        print("Made by me")
     elif user_input == '4':
-        pass
+        print("Google it")
     elif user_input == '5':
         game_menu = False
     else:
         print("That wasn't an option")
-    time.sleep(0.1)
+    time.sleep(0.2)
     
 print("\nThanks for playing Irene Indiana!")
 time.sleep(0.1)
