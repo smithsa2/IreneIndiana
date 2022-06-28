@@ -32,6 +32,7 @@ def main_menu():
 
 def new_game():
     # Figure out how and where I want to store the game data
+    # Do Last
     pass
 
 
