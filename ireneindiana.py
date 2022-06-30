@@ -23,7 +23,7 @@ def main_menu():
     if user_input == '1':
         new_game()
     elif user_input == '2':
-        if not os.path.exists("/game_data/current_game.txt"):
+        if not os.path.exists("game_data/current_game.txt"):
             print("No current game")
         else:
             load_game()
@@ -43,7 +43,7 @@ def new_game():
     game_state = True
 
 def load_game():
-    with open("/game_data/current_game.txt", 'r'):
+    with open("game_data/current_game.txt", 'r'):
         pass
 
 def action_menu():
@@ -75,16 +75,145 @@ else:
             DESCRIPTIONS.append([])
             for j in range(5):
                 DESCRIPTIONS[i].append(x[i*5+j])
+#Format ['Action name', 'name of speaker', [dialogue1, dialouge2, etc.]]
+POSSIBLE_SPEAK = [[
+    [["Yell to Runners", "Runner: ", ["I ... heard ... {} ... was ... near ... {} ...", ""]]],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []]]
 
-POSSIBLE_ACTIONS = [[],
+POSSIBLE_NON_CLUE = [[
     [],
     [],
     [],
-    []]
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []]]
+
+POSSIBLE_CONTAINER = [[
+    [["Open Shipping Container (requires a means of opening a lock)", ]],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []]]
+
+POSSIBLE_KEY = [[
+    [],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []]]
+
+POSSIBLE_CIPHER = [[
+    [],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []],
+    [[],
+    [],
+    [],
+    [],
+    []]]
+
 
 # Variables
 pos = [4,0]
-
 
 game_state = False
 game_loop = True
