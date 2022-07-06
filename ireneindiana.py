@@ -7,6 +7,7 @@
 import time
 import os
 import random
+from turtle import position
 
 # Funtions
 
@@ -41,25 +42,25 @@ def main_menu():
 
 
 def new_game():
-    global game_state, GAME
+    global game_state, game
     # Speakers, No-clues, Containers, Keys, (add ciphers/puzzles)
-    GAME = [[[[] for i in range(5)] for j in range(5)] for k in range(5)]
+    game = [[[[] for i in range(5)] for j in range(5)] for k in range(5)]
     # Speakers
     for speaker in POSSIBLE_SPEAK:
         if random.randint(0, 100) > -1:  # Make constant for different difficult
-            GAME[0][speaker[3][0]][speaker[3][1]].append(speaker[0:3])
+            game[0][speaker[3][0]][speaker[3][1]].append(speaker[0:3])
     # Non-Clues
     for non_clue in POSSIBLE_NON_CLUE:
         if random.randint(0, 100) > -1:  # again make constant
-            GAME[1][non_clue[2][0]][non_clue[2][1]].append(non_clue[0:2])
+            game[1][non_clue[2][0]][non_clue[2][1]].append(non_clue[0:2])
     # Containers and their keys
     for container, key in POSSIBLE_CONTAINER:
         if random.randint(0, 100) > -1:  # again make constant
-            GAME[2][container[4][0]][container[4][1]].append(container[0:4])
-            GAME[3][key[2][0]][key[2][1]].append(key[0:2])
+            game[2][container[5][0]][container[5][1]].append(container[0:5])
+            game[3][key[3][0]][key[3][1]].append(key[0:3])
     for cipher in POSSIBLE_CIPHER:
         if random.randint(0, 100) > -1:  # again make constant
-            GAME[4][random.randint(0,4)][random.randint(0,4)].append(cipher)
+            game[4][random.randint(0,4)][random.randint(0,4)].append(cipher)
     game_state = True
 
 
@@ -68,7 +69,7 @@ def print_stats():
 
 
 def action_menu():
-    global pos, GAME
+    global pos, game, inventory
     print()
     print(f"    ========== {ROOM_NAMES[pos[1]][pos[0]]} ==========")
     print(DESCRIPTIONS[pos[1]][pos[0]])
@@ -78,10 +79,11 @@ def action_menu():
     print("(wasd) to move rooms")
     actions = []
     for i in range(5):
-        for j in GAME[i][pos[0]][pos[1]]:
+        for j in game[i][pos[0]][pos[1]]:
             actions.append([i, j])
     for i in range(len(actions)):
         print(f"{i+1})  - {actions[i][1][0]}")
+
     ans = input("\n> ")
     x = True
     if ans == 'w' and pos[1] < 4:
@@ -95,12 +97,41 @@ def action_menu():
     else:
         x = False
         try:
-            if int(ans) > 0 and int(ans) <= len(actions):
-                print(f"Selected - {actions[int(ans)-1][1][0]}")
-                if type(actions[int(ans)-1][1][1]) == list:
-                    print(f"{random.choice(actions[int(ans)-1][1][1])}")
-                else:
-                    print(f"{actions[int(ans)-1][1][1]}")
+            y = int(ans) - 1
+            if int(ans) >= 0 and int(ans) <= len(actions):
+                # Do action
+                match (actions[y][0]):
+                    case 0: # Speak
+                        print(f"Selected - {actions[y][1][0]}")
+                        print(f"{actions[y][1][1]} {random.choice(actions[y][1][2])}") # Add formatting for clue
+                    case 1: # Non-clue
+                        print(f"Selected - {actions[y][1][0]}")
+                        print(f"{random.choice(actions[y][1][1])}")
+                    case 2: # Container
+                        print(f"Selected - {actions[y][1][0]}")
+                        if actions[y][1][3] in inventory:
+                            print(actions[y][1][2])
+                            # Do container action
+                            if actions[y][1][4] == 'irene':
+                                print("Checking for Irene Indiana")
+                                check_irene(pos) # Call function
+                            else:
+                                print("Item added to inventory")
+                                inventory.append(actions[y][1][4]) # Pickup item
+                            actions.pop(y)
+                        else:
+                            print(actions[y][1][1])
+                    case 3: # Keys
+                        print(f"Selected - {actions[y][1][0]}")
+                        print(actions[y][1][1])
+                        inventory.append(actions[y][1][2])
+                        print("Item added to inventory")
+                        game[3][pos[0]][pos[1]].pop(0) # Remove container from room
+                    case 4: # Cipher
+                        print(f"Selected - {actions[y][1][0]}")
+                        print(f"{actions[y][1][1]}")
+                    case 5: # Check for irene
+                        print("Irene is not here. Wasted 40 minutes") # or something
             else:
                 raise Exception("Out of action range")
         except:
@@ -117,7 +148,7 @@ def pick_up(key):
     pass
 
 
-def check_irene(key):
+def check_irene(pos):
     pass
 
 
@@ -160,11 +191,11 @@ else:
 # Format ['Action name', 'name of speaker', [dialogue1, dialouge2, etc.]]
 
 POSSIBLE_SPEAK = [
-    ["Yell to Runners", "Runner: ", ["I ... heard ... {} ... was ... near ... {} ...", ""], [0, 0]],
-    ["Talk to Maths Teacher", "Maths Teacher: ", ["I thought {} was at {}", ], [3, 0]],
+    ["Yell to Runners", "Runner: ", ["I ... heard ... {} ... was ... near ... {} ..."], [0, 0]],
+    ["Talk to Maths Teacher", "Maths Teacher: ", ["I thought {} was at {}", "I think {} said they would be at {}"], [3, 0]],
     ["Talk to Physics Teacher", "Physics Teacher: ", [], [1, 1]],
     ["Talk to Enlglish Teacher", "English Teacher: ", [], [0, 2]],
-    ["Talk to Basketballers", "Basketballer: ", [], [2, 3]],
+    ["Talk to Basketballers", "Basketballer: ", [], [2, 3]]
 ]
 
 POSSIBLE_NON_CLUE = [
@@ -176,16 +207,16 @@ POSSIBLE_NON_CLUE = [
 # ['key desc', 'pick up key', [locx, locy]]]
 POSSIBLE_CONTAINER = [
     [["Open Shipping Container", "Cannot open, the old rusty lock wont budge",
-      "The acid dissolved the rusty latch and the door swings open", check_irene, [0, 0]],
-     ["Acid (could be used to dissolve metal or remove rust)", "Picked up acid (don't spill it)", [1, 0]]],
+      "The acid dissolved the rusty latch and the door swings open", 'acid', 'irene', [0, 0]],
+     ["Acid (could be used to dissolve metal or remove rust)", "Picked up acid (don't spill it)", 'acid', [1, 0]]],
     [["Talk to hooded kid", "He ignores you, entirely obsessed with the comforting glow of his smartphone",
       "The smell of the lollies, tantalisingly sweet and delicous, fills the air. The hooded kid notices and glances up, \
       entranced by the aroma. You see longing in his eyes, to break free, to escape the emotionally manipulating programs.\
       He starts towards you, but shudders and gives in. He returns to the glowing rectangle, encompassed in its friendly\
-      warmth.", pick_up, [0, 1]], ["A dollar bag of lollies (could be used to bribe children)", "You pay for the dollar bag and put it in your pocket", [0, 4]]],
+      warmth. You recieved 'depression'", 'lollies', 'depression', [0, 1]], ["A dollar bag of lollies (could be used to bribe children)", "You pay for the dollar bag and put it in your pocket", 'lollies', [0, 4]]],
     [["A battered silver car, parked on a horrific angle, sits at the edge of the carpark. Could it contain a secret?", "You try the boot, but it's locked.",
-      "You open the boot and find a note", pick_up, [4, 0]], ["Car keys with the same logo as the one in the carpark",
-      "You picked up the car keys and quietly slid them into your pocket", [4, 1]]]
+      "You open the boot and find a note", 'car_keys', 'car_note', [4, 0]], ["Car keys with the same logo as the one in the carpark",
+      "You picked up the car keys and quietly slid them into your pocket", 'car_keys', [4, 1]]]
 ]
 
 POSSIBLE_CIPHER = [
@@ -213,7 +244,8 @@ ROOM_NAMES = [
 # Variables
 pos = [4, 0]
 # Format - [speakers, non-clues, containers, keys, (to be ciphers)]
-GAME = []
+game = []
+inventory = []
 
 game_state = False
 game_loop = True
