@@ -42,7 +42,7 @@ def main_menu():
 
 
 def new_game():
-    global game_state, game
+    global game_state, game, irene
     # Speakers, No-clues, Containers, Keys, (add ciphers/puzzles)
     game = [[[[] for i in range(5)] for j in range(5)] for k in range(5)]
     # Speakers
@@ -61,6 +61,9 @@ def new_game():
     for cipher in POSSIBLE_CIPHER:
         if random.randint(0, 100) > -1:  # again make constant
             game[4][random.randint(0,4)][random.randint(0,4)].append(cipher)
+    # Place Irene
+    irene = random.choice(POSSIBLE_IRENE)
+    # Generate clue trail
     game_state = True
 
 
@@ -240,12 +243,41 @@ ROOM_NAMES = [
     ["Dairy", "Table Mountain", "Far Table Mountain", "Gym", "Bottom Field"]
 ]
 
+# Rooms that Irene can be in
+POSSIBLE_IRENE = [
+    [0,0],
+    [2,0],
+    [1,1],
+    [2,1],
+    [3,1],
+    [4,1],
+    [1,2],
+    [2,2],
+    [3,2],
+    [4,2],
+    [0,3],
+    [4,3],
+    [0,4],
+    [1,4],
+    [2,4],
+    [3,4]
+]
+
+# Rooms that you can search for irene in (excludes containers)
+POSSIBLE_SEARCH = [
+    [False, False, True, False, False],
+    [False, True, False, True, False],
+    [False, True, True, True, True],
+    [True, False, False, False, True],
+    [True, True, True, True, False]
+]
 
 # Variables
 pos = [4, 0]
 # Format - [speakers, non-clues, containers, keys, (to be ciphers)]
 game = []
 inventory = []
+irene = [0,0]
 
 game_state = False
 game_loop = True
