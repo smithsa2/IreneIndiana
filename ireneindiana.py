@@ -45,9 +45,11 @@ def new_game():
     global game_state, game, irene
     # Speakers, No-clues, Containers, Keys, (add ciphers/puzzles)
     game = [[[[] for i in range(5)] for j in range(5)] for k in range(5)]
+    choices = []
     # Speakers
     for speaker in POSSIBLE_SPEAK:
         if random.randint(0, 100) > -1:  # Make constant for different difficult
+            choices.append([0, len(game[0][speaker[3][0]][speaker[3][1]]), speaker])
             game[0][speaker[3][0]][speaker[3][1]].append(speaker[0:3])
     # Non-Clues
     for non_clue in POSSIBLE_NON_CLUE:
@@ -56,14 +58,34 @@ def new_game():
     # Containers and their keys
     for container, key in POSSIBLE_CONTAINER:
         if random.randint(0, 100) > -1:  # again make constant
+            choices.append([2, key, container])
+            choices.append([2, len(game[3][key[3][0]][key[3][1]]), key, container])
             game[2][container[5][0]][container[5][1]].append(container[0:5])
             game[3][key[3][0]][key[3][1]].append(key[0:3])
     for cipher in POSSIBLE_CIPHER:
         if random.randint(0, 100) > -1:  # again make constant
-            game[4][random.randint(0,4)][random.randint(0,4)].append(cipher)
+            pos = [random.randint(0,4),random.randint(0,4)]
+            cipher.append(pos)
+            choices.append([4, len(game[4][pos[0]][pos[1]]), cipher])
+            game[4][pos[0]][pos[1]].append(cipher[0:])
     # Place Irene
     irene = random.choice(POSSIBLE_IRENE)
+    prev = irene
     # Generate clue trail
+    trail = []
+    for i in range(len(choices)):
+        choice = random.choice(choices)
+        if choice[0] in [0, 4]:
+            # Make dialogue/solution contain clue
+            pos = choice[2][-1]
+            print(pos, choice[0], choice[1])
+            print(game[4][pos[0]][pos[1]])
+            # Merge all lists, containers, ciphers etc. into one list of rooms with None in there isn't such an item.
+            # Recode this entire segment and fix rest of code for it to work
+            game[choice[0]][pos[0]][pos[1]][choice[1]][2] = game[choice[0]][pos[0]][pos[1]][choice[1]][2].format("Irene", ROOM_NAMES[prev[0]][prev[1]])
+            prev = pos
+        else:
+            pass
     game_state = True
 
 
@@ -73,11 +95,9 @@ def print_stats():
 
 def action_menu():
     global pos, game, inventory
-    print()
-    print(f"    ========== {ROOM_NAMES[pos[1]][pos[0]]} ==========")
+    print(f"\n    ========== {ROOM_NAMES[pos[1]][pos[0]]} ==========")
     print(DESCRIPTIONS[pos[1]][pos[0]])
-    print("    =========================")
-    print()
+    print("    =========================\n")
     print("Actions: ")
     print("(wasd) to move rooms")
     actions = []
@@ -223,16 +243,16 @@ POSSIBLE_CONTAINER = [
 ]
 
 POSSIBLE_CIPHER = [
-    ["Note0", "Read Note, are now bored"],
-    ["Note1", "Read Note"],
-    ["Note2", "Read Note"],
-    ["Note3", "Read Note"],
-    ["Note4", "Read Note"],
-    ["Note5", "Read Note"],
-    ["Note6", "Read Note"],
-    ["Note7", "Read Note"],
-    ["Note8", "Read Note"],
-    ["Note9", "Read Note"],
+    ["Note0", "Read Note, are now bored", "{} was in {}"],
+    ["Note1", "Read Note", "{} was in {}"],
+    ["Note2", "Read Note", "{} was in {}"],
+    ["Note3", "Read Note", "{} was in {}"],
+    ["Note4", "Read Note", "{} was in {}"],
+    ["Note5", "Read Note", "{} was in {}"],
+    ["Note6", "Read Note", "{} was in {}"],
+    ["Note7", "Read Note", "{} was in {}"],
+    ["Note8", "Read Note", "{} was in {}"],
+    ["Note9", "Read Note", "{} was in {}"],
 ]  # Not here yet
 
 ROOM_NAMES = [
