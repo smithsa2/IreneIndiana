@@ -7,7 +7,6 @@
 import time
 import os
 import random
-from turtle import position
 
 # Funtions
 
@@ -44,48 +43,54 @@ def main_menu():
 def new_game():
     global game_state, game, irene
     # Speakers, No-clues, Containers, Keys, (add ciphers/puzzles)
-    game = [[[[] for i in range(5)] for j in range(5)] for k in range(5)]
+    game = [[[None for i in range(5)] for j in range(5)] for k in range(5)]
     choices = []
     # Speakers
     for speaker in POSSIBLE_SPEAK:
         if random.randint(0, 100) > -1:  # Make constant for different difficult
-            choices.append([0, len(game[0][speaker[3][0]][speaker[3][1]]), speaker])
-            game[0][speaker[3][0]][speaker[3][1]].append(speaker[0:3])
+            choices.append([0, speaker])
+            game[speaker[3][0]][speaker[3][1]][0] = speaker[0:3]
     # Non-Clues
     for non_clue in POSSIBLE_NON_CLUE:
         if random.randint(0, 100) > -1:  # again make constant
-            game[1][non_clue[2][0]][non_clue[2][1]].append(non_clue[0:2])
+            game[non_clue[2][0]][non_clue[2][1]][1] = non_clue[0:2]
     # Containers and their keys
-    for container, key in POSSIBLE_CONTAINER:
+    for container in POSSIBLE_CONTAINER:
+        key = container[-1]
         if random.randint(0, 100) > -1:  # again make constant
-            choices.append([2, key, container])
-            choices.append([2, len(game[3][key[3][0]][key[3][1]]), key, container])
-            game[2][container[5][0]][container[5][1]].append(container[0:5])
-            game[3][key[3][0]][key[3][1]].append(key[0:3])
+            choices.append([1, key, container[0:-1]+[key[2]]])
+            game[container[4][0]][container[4][1]][2] = container[0:-1]+[key[2]]
+            game[key[3][0]][key[3][1]][3] = key[0:3]
     for cipher in POSSIBLE_CIPHER:
         if random.randint(0, 100) > -1:  # again make constant
             pos = [random.randint(0,4),random.randint(0,4)]
             cipher.append(pos)
-            choices.append([4, len(game[4][pos[0]][pos[1]]), cipher])
-            game[4][pos[0]][pos[1]].append(cipher[0:])
+            choices.append([2, cipher])
+            game[pos[0]][pos[1]][4] = cipher[0:]
     # Place Irene
     irene = random.choice(POSSIBLE_IRENE)
     prev = irene
     # Generate clue trail
     trail = []
+    # Merge all lists, containers, ciphers etc. into one list of rooms with None if there isn't such an item.
+    # Recode this entire segment and fix rest of code for it to work
+    random.shuffle(choices) # For now include all items in trail
     for i in range(len(choices)):
-        choice = random.choice(choices)
-        if choice[0] in [0, 4]:
+        choice = choices[i]
+        key_type = choice[0]
+        if key_type == 0:
             # Make dialogue/solution contain clue
-            pos = choice[2][-1]
-            print(pos, choice[0], choice[1])
-            print(game[4][pos[0]][pos[1]])
-            # Merge all lists, containers, ciphers etc. into one list of rooms with None in there isn't such an item.
-            # Recode this entire segment and fix rest of code for it to work
-            game[choice[0]][pos[0]][pos[1]][choice[1]][2] = game[choice[0]][pos[0]][pos[1]][choice[1]][2].format("Irene", ROOM_NAMES[prev[0]][prev[1]])
-            prev = pos
+            pos = choice[1][-1]
+            game[pos[0]][pos[1]][key_type][2] = random.choice(game[pos[0]][pos[1]][key_type][2]).format("Irene", ROOM_NAMES[prev[0]][prev[1]])
+        elif key_type == 1:
+            note_text += {choice[1][3]:"Check {}".format(ROOM_NAMES[prev[0]][prev[1]])}
+            pos = choice[1][4]
+        elif key_type == 2:
+            note_text += {choice[1][1]:"Check {}".format(ROOM_NAMES[prev[0]][prev[1]])}
+            pos = choice[1][2]
         else:
             pass
+        prev = pos
     game_state = True
 
 
@@ -100,12 +105,10 @@ def action_menu():
     print("    =========================\n")
     print("Actions: ")
     print("(wasd) to move rooms")
-    actions = []
-    for i in range(5):
-        for j in game[i][pos[0]][pos[1]]:
-            actions.append([i, j])
+    actions = [x for x in game[pos[0]][pos[1]] if x is not None]
+    print(actions)
     for i in range(len(actions)):
-        print(f"{i+1})  - {actions[i][1][0]}")
+        print(f"{i+1})  - {actions[i][0]}")
 
     ans = input("\n> ")
     x = True
@@ -201,7 +204,7 @@ MAP = [['Top field', 'Chemistry classrooms', 'Science hallway',
 DESCRIPTIONS = []
 
 if not os.path.exists("game_data/descriptions.txt"):
-    print("Descriptions file is missing. Cannot Run")
+    print("Descriptions file is missing. Cannot run")
     quit()
 else:
     with open("game_data/descriptions.txt", 'r') as file:
@@ -216,9 +219,9 @@ else:
 POSSIBLE_SPEAK = [
     ["Yell to Runners", "Runner: ", ["I ... heard ... {} ... was ... near ... {} ..."], [0, 0]],
     ["Talk to Maths Teacher", "Maths Teacher: ", ["I thought {} was at {}", "I think {} said they would be at {}"], [3, 0]],
-    ["Talk to Physics Teacher", "Physics Teacher: ", [], [1, 1]],
-    ["Talk to Enlglish Teacher", "English Teacher: ", [], [0, 2]],
-    ["Talk to Basketballers", "Basketballer: ", [], [2, 3]]
+    ["Talk to Physics Teacher", "Physics Teacher: ", ["I thought {} was at {}"], [1, 1]],
+    ["Talk to Enlglish Teacher", "English Teacher: ", ["I thought {} was at {}"], [0, 2]],
+    ["Talk to Basketballers", "Basketballer: ", ["I thought {} was at {}"], [2, 3]]
 ]
 
 POSSIBLE_NON_CLUE = [
@@ -229,30 +232,30 @@ POSSIBLE_NON_CLUE = [
 # [['container desc', 'open attempt', 'open', [locx, locy], reward_funct],
 # ['key desc', 'pick up key', [locx, locy]]]
 POSSIBLE_CONTAINER = [
-    [["Open Shipping Container", "Cannot open, the old rusty lock wont budge",
-      "The acid dissolved the rusty latch and the door swings open", 'acid', 'irene', [0, 0]],
-     ["Acid (could be used to dissolve metal or remove rust)", "Picked up acid (don't spill it)", 'acid', [1, 0]]],
-    [["Talk to hooded kid", "He ignores you, entirely obsessed with the comforting glow of his smartphone",
-      "The smell of the lollies, tantalisingly sweet and delicous, fills the air. The hooded kid notices and glances up, \
-      entranced by the aroma. You see longing in his eyes, to break free, to escape the emotionally manipulating programs.\
-      He starts towards you, but shudders and gives in. He returns to the glowing rectangle, encompassed in its friendly\
-      warmth. You recieved 'depression'", 'lollies', 'depression', [0, 1]], ["A dollar bag of lollies (could be used to bribe children)", "You pay for the dollar bag and put it in your pocket", 'lollies', [0, 4]]],
-    [["A battered silver car, parked on a horrific angle, sits at the edge of the carpark. Could it contain a secret?", "You try the boot, but it's locked.",
-      "You open the boot and find a note", 'car_keys', 'car_note', [4, 0]], ["Car keys with the same logo as the one in the carpark",
+    ["Open Shipping Container", "Cannot open, the old rusty lock wont budge",
+      "The acid dissolved the rusty latch and the door swings open", 'container_note', [0, 0],
+      ["Acid (could be used to dissolve metal or remove rust)", "Picked up acid (don't spill it)", 'acid', [1,0]]],
+    ["Talk to hooded kid", "He ignores you, entirely obsessed with the comforting glow of his smartphone",
+      "The smell of the lollies, tantalisingly sweet and delicous, fills the air. The hooded kid notices and glances up.\
+       He gives you a key labelled 'staffroom'", 'staffroom_key', [0, 1],
+      ["A dollar bag of lollies (could be used to bribe children)", "You pay for the dollar bag and put it in your pocket", 'lollies', [0, 4]]],
+    ["A battered silver car, parked on a horrific angle, sits at the edge of the carpark. Could it contain a secret?", "You try the boot, but it's locked.",
+      "You open the boot and find a note", 'car_note', [4, 0],
+      ["Car keys with the same logo as the car in the carpark",
       "You picked up the car keys and quietly slid them into your pocket", 'car_keys', [4, 1]]]
 ]
 
 POSSIBLE_CIPHER = [
-    ["Note0", "Read Note, are now bored", "{} was in {}"],
-    ["Note1", "Read Note", "{} was in {}"],
-    ["Note2", "Read Note", "{} was in {}"],
-    ["Note3", "Read Note", "{} was in {}"],
-    ["Note4", "Read Note", "{} was in {}"],
-    ["Note5", "Read Note", "{} was in {}"],
-    ["Note6", "Read Note", "{} was in {}"],
-    ["Note7", "Read Note", "{} was in {}"],
-    ["Note8", "Read Note", "{} was in {}"],
-    ["Note9", "Read Note", "{} was in {}"],
+    ["Note0", "note text"],
+    ["Note1", "Read Note", "note text"],
+    ["Note2", "Read Note", "note text"],
+    ["Note3", "Read Note", "note text"],
+    ["Note4", "Read Note", "note text"],
+    ["Note5", "Read Note", "note text"],
+    ["Note6", "Read Note", "note text"],
+    ["Note7", "Read Note", "note text"],
+    ["Note8", "Read Note", "note text"],
+    ["Note9", "Read Note", "note text"],
 ]  # Not here yet
 
 ROOM_NAMES = [
@@ -298,6 +301,7 @@ pos = [4, 0]
 game = []
 inventory = []
 irene = [0,0]
+note_text = {}
 
 game_state = False
 game_loop = True
