@@ -41,7 +41,7 @@ def main_menu():
 
 
 def new_game():
-    global game_state, game, irene, note_text, trail
+    global game_state, game, irene, note_text, trail, time
     # Speakers, No-clues, Containers, Keys, (add ciphers/puzzles)
     game = [[[None for i in range(5)] for j in range(5)] for k in range(5)]
     choices = []
@@ -50,6 +50,8 @@ def new_game():
         if random.randint(0, 100) > -1:  # Make constant for different difficult
             choices.append([0, speaker])
             game[speaker[3][0]][speaker[3][1]][0] = speaker[0:3]
+            # Red herring
+            game[speaker[3][0]][speaker[3][1]][0][2] = f"I haven't seen Irene, maybe she is at {ROOM_NAMES[random.randint(0,4)][random.randint(0,4)]}"
     # Non-Clues
     for non_clue in POSSIBLE_NON_CLUE:
         if random.randint(0, 100) > -1:  # again make constant
@@ -67,6 +69,7 @@ def new_game():
             cipher.append(pos)
             choices.append([2, cipher])
             game[pos[0]][pos[1]][4] = cipher[0:]
+            # Red Herring
             note_text[cipher[1]] = f"Irene Indiana is at {ROOM_NAMES[random.randint(0,4)][random.randint(0,4)]}"
     # Place Irene
     irene = random.choice(POSSIBLE_IRENE)
@@ -76,7 +79,7 @@ def new_game():
     # Recode this entire segment and fix rest of code for it to work
     random.shuffle(choices)  # Include all items in trail for now
     trail = []
-    for i in range(len(choices[:5])):
+    for i in range(len(choices[:2])):  # Make random based on difficulty
         choice = choices[i]
         key_type = choice[0]
         #print(f"Choice: {choice}")
@@ -84,7 +87,7 @@ def new_game():
         if key_type == 0:  # Speaker
             # Make dialogue/solution contain clue
             pos = choice[1][-1]
-            game[pos[0]][pos[1]][key_type][2] = random.choice(game[pos[0]][pos[1]][key_type][2]).format("Irene", ROOM_NAMES[prev[1]][prev[0]])
+            game[pos[0]][pos[1]][key_type][2] = random.choice(choice[1][2]).format("Irene", ROOM_NAMES[prev[1]][prev[0]])
             trail.append(f"Loc: {ROOM_NAMES[pos[1]][pos[0]]}; Opt: {choice[1][0]}")
         elif key_type == 1: # Container
             note_text[choice[2][-1]] = "Check {}".format(ROOM_NAMES[prev[1]][prev[0]])
@@ -102,28 +105,49 @@ def new_game():
     trail.reverse()
     print(f"Trail starts at {ROOM_NAMES[prev[1]][prev[0]]}")
     print(trail)
+    time = 360  # Make random based on difficulty
     game_state = True
 
 
 def print_stats():
     pass
 
+def display(pos):
+    print(" _ _ _ _ _")
+    for y in range(5, -1, -1):
+        string = "|"
+        for x in range(5):
+            if [x,y] == pos:
+                string += "X|"
+            elif [x,y] == hint:
+                string += '?|'
+            else:
+                string += "_|"
+        if y == 0:
+            string += f'     Time: {time//60}h {time%60}m left'
+        print(string)
 
 def action_menu():
-    global pos, game, inventory
+    global pos, game, inventory, time
+    # Print Map and Time remaining
+    print()
+    display(pos)
+    # Print Location and description
     print(f"\n    ========== {ROOM_NAMES[pos[1]][pos[0]]} ==========")
-    print(DESCRIPTIONS[pos[1]][pos[0]])
-    print("    =========================\n")
+    print(DESCRIPTIONS[pos[1]][pos[0]][0:-1])
+    print("    ======================" + '=' * len(ROOM_NAMES[pos[1]][pos[0]]) + "\n")
     print("Actions: ")
     print("(wasd) to move rooms")
     actions = [[i, game[pos[0]][pos[1]][i]] for i in range(5) if game[pos[0]][pos[1]][i] is not None]
-    #print(actions)
+    #Print Actions
     for i in range(len(actions)):
         print(f"{i+1})  - {actions[i][1][0]}")
     if pos in POSSIBLE_IRENE:
         print("I)  - Search for Irene")
+    # Get input
     ans = input("\n> ").strip().lower()
     x = True
+    # Check if movement input
     if ans == 'w' and pos[1] < 4:
         index, change, direction = 1, 1, 'north'
     elif ans == 's' and pos[1] > 0:
@@ -132,9 +156,11 @@ def action_menu():
         index, change, direction = 0, -1, 'east'
     elif ans == 'd' and pos[0] < 4:
         index, change, direction = 0, 1, 'west'
+    # Check if irene search
     elif ans == 'i':
         x = False
         check_irene(pos)
+    # Check if action option
     else:
         x = False
         try:
@@ -143,12 +169,15 @@ def action_menu():
                 # Do action
                 match (actions[y][0]):
                     case 0: # Speak
+                        time -= 5
                         print(f"Selected - {actions[y][1][0]}")
-                        print(f"{actions[y][1][1]} - {actions[y][1][2]}") # Add formatting for clue
+                        print(f"{actions[y][1][1]} {actions[y][1][2]}") # Add formatting for clue
                     case 1: # Non-clue
+                        time -= 5
                         print(f"Selected - {actions[y][1][0]}")
                         print(f"{random.choice(actions[y][1][1])}")
-                    case 2: # Container
+                    case 2: # Container 
+                        time -= 15
                         print(f"Selected - {actions[y][1][0]}")
                         if actions[y][1][-1] in inventory:
                             print(actions[y][1][2])
@@ -157,45 +186,49 @@ def action_menu():
                                 print("Checking for Irene Indiana")
                                 check_irene(pos) # Call function
                             else:
-                                print("You found a note")#added to inventory")
-                                #inventory.append(actions[y][1][4]) # Pickup item
+                                print("You found a note (added to inventory)")
+                                inventory.append(actions[y][1][4]) # Pickup item
                                 print(f"It reads: |{note_text[actions[y][1][4]]}|")
                             actions.pop(y)
                         else:
                             print(actions[y][1][1])
                     case 3: # Keys
+                        time -= 5
                         print(f"Selected - {actions[y][1][0]}")
                         print(actions[y][1][1])
                         inventory.append(actions[y][1][2])
                         print("Item added to inventory")
                         game[pos[0]][pos[1]][3].pop(0) # Remove container from room
                     case 4: # Cipher
+                        time -= 5
                         print(f"Selected - {actions[y][1][0]}")
                         print(f"It reads: |{note_text[actions[y][1][1]]}|")
-                    case 5: # Check for irene
-                        print("Irene is not here. Wasted 40 minutes") # or something
             else:
                 raise Exception("Out of action range")
         except:
             print("Not a valid input!")
+            time -= 15
+    # Move if input was movement
     if x:
+        time -= 5
         pos[index] += change
         print(f"Moved {direction} to {ROOM_NAMES[pos[1]][pos[0]]}")
+    # Wait for user
     input("    Enter to Continue")
     # Remove over previous line
     print("\033[1A\r                     ")
 
 
-def pick_up(key):
-    pass
-
-
 def check_irene(pos):
-    pass
+    global time
+    if pos == irene:
+        print(f"You have found the elusive Irene Indiana! There were {time//60}h {time%60}m to spare")
+        print(f"Score: {0}")
+        print(time)
+    else:
+        print("You searched for Irene, but it seems she is not here. You wasted 40 minutes")
+        time -= 40
 
-
-def talk(key):
-    pass
 
 # Constants
 CREDITS = """
@@ -318,6 +351,8 @@ game = []
 inventory = []
 irene = [0,0]
 note_text = {}
+time = 0
+hint = []
 
 game_state = False
 game_loop = True
