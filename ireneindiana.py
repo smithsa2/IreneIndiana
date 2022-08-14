@@ -43,7 +43,7 @@ def main_menu():
 
 
 def new_game():
-    global game_state, game, irene, note_text, trail, game_time
+    global game_state, game, irene, note_text, trail, game_time, hint
     # Speakers, No-clues, Containers, Keys, (add ciphers/puzzles)
     game = [[[None for i in range(5)] for j in range(5)] for k in range(5)]
     choices = []
@@ -67,7 +67,7 @@ def new_game():
             game[key[3][0]][key[3][1]][3] = key[0:3]
     for cipher in POSSIBLE_CIPHER:  # Make list of all rooms and shuffle them. 
         if random.randint(0, 100) > -1:  # again make constant
-            pos = [random.randint(0,4),random.randint(0,4)]
+            pos = [random.randint(0,4), random.randint(0,4)]
             cipher.append(pos)
             choices.append([2, cipher])
             game[pos[0]][pos[1]][4] = cipher[0:]
@@ -83,28 +83,33 @@ def new_game():
     irene = random.choice(POSSIBLE_IRENE)
     prev = irene
     # Generate clue trail
-    # Merge all lists, containers, ciphers etc. into one list of rooms with None if there isn't such an item.
-    # Recode this entire segment and fix rest of code for it to work
-    random.shuffle(choices)  # Include all items in trail for now
+    random.shuffle(choices)
     trail = []
     for i in range(len(choices[:2])):  # Make random based on difficulty
         choice = choices[i]
         key_type = choice[0]
-        #print(f"Choice: {choice}")
-        #print(f"Prev: {prev}")
+        logging.warning(f"Prev: {prev}")
+        logging.warning(f"Choice: {choice}")
         if key_type == 0:  # Speaker
             # Make dialogue/solution contain clue
             pos = choice[1][-1]
             game[pos[0]][pos[1]][key_type][2] = random.choice(choice[1][2]).format("Irene", ROOM_NAMES[prev[1]][prev[0]])
-            trail.append(f"Loc: {ROOM_NAMES[pos[1]][pos[0]]}; Opt: {choice[1][0]}")
+            trail.append([choice[1][0], pos])
         elif key_type == 1: # Container
-            note_text[choice[2][-1]] = "Check {}".format(ROOM_NAMES[prev[1]][prev[0]])
+            note_loc = ROOM_NAMES[prev[1]][prev[0]]
+            possible_texts = ["Check near {}",
+                              "Perhaps she is at {}",
+                              "She might be near {}",
+                              "She often hangs out around {}"]
+            note_text[choice[2][3]] = random.choice(possible_texts).format(note_loc)
+            logging.warning(choice)
             pos = choice[2][4]
-            trail.append(f"Loc: {ROOM_NAMES[pos[1]][pos[0]]}; Opt: {choice[2][3].title()}")
-            pos = choice[1][3]
-            trail.append(f"Loc: {ROOM_NAMES[pos[1]][pos[0]]}; Opt: {choice[1][0].title()}")
+            trail.append([choice[2][3], pos])
+            pos = choice[1][3] # Direction of next hint is to key then container
+            trail.append([choice[1][0], pos])
+            pos = choice[2][4] # Direction of next clue is to container not to key
         elif key_type == 2: # Note/Cipher
-            note_loc = ROOM_NAMES[random.randint(0,4)][random.randint(0,4)]
+            note_loc = ROOM_NAMES[prev[1]][prev[0]]
             possible_texts = ["Check near {}",
                               "Perhaps she is at {}",
                               "She might be near {}",
@@ -113,11 +118,12 @@ def new_game():
                               "I saw her friend at {}"]
             note_text[choice[1][1]] = random.choice(possible_texts).format(note_loc)
             pos = choice[1][2]
-            trail.append(f"Loc: {ROOM_NAMES[pos[1]][pos[0]]}; Opt: {choice[1][0]}")
+            trail.append([choice[1][0], pos])
         else:
             raise Exception("Invalid key_type")
         prev = pos
     trail.reverse()
+    hint = trail[0]
     logging.warning(f"Trail starts at {ROOM_NAMES[prev[1]][prev[0]]}")
     logging.warning(trail)
     game_time = 360  # Make random based on difficulty
@@ -143,7 +149,7 @@ def display(pos):
         print(string)
 
 def action_menu():
-    global pos, game, inventory, game_time, game_loop
+    global pos, game, inventory, game_time, game_loop, hint, trail
     # Print Map and Time remaining
     if game_time <= 0:
         print("You have run out of game_time!")
@@ -229,6 +235,13 @@ def action_menu():
                         game_time -= CIPHER_TIME
                         print(f"Selected - {actions[y][1][0]}")
                         note_print(actions[y][1][1])
+                # Check if room and action is next hint
+                if actions[y][1][1] == hint[0] and pos == hint[1]:
+                    # Remove hint from hint list
+                    trail.pop(0)
+                    # Set new hint from hint list
+                    hint = trail[0]
+                    # Add to score
             else:
                 raise Exception("Out of action range")
         except BaseException as exception_error: # For debug purposes
@@ -250,6 +263,7 @@ def check_irene(pos):
     global game_time
     if pos == irene:
         print(f"You have found the elusive Irene Indiana! There were {game_time//60}h {game_time%60}m to spare")
+        # Calculate score
         print(f"Score: {0}")
         logging.warning(f"game_time: {game_time}")
         # Actually win
