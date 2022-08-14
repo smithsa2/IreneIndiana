@@ -26,7 +26,11 @@ def main_menu():
 5) Quit""")
     user_input = input("> ").strip().lower()
     if user_input == '1':
-        new_game()
+        x = input("Easy (1) or Hard (2): \n> ")
+        while x not in ['1','2']:
+            print("Please enter '1' for easy or '2' for hard")
+            x = input("Easy (1) or Hard (2): \n> ").strip().lower()
+        new_game(int(x)-1)
     elif user_input == '2':
         if not os.path.exists("game_data/current_game.txt"):
             print("No stats")
@@ -42,8 +46,8 @@ def main_menu():
         print("That wasn't an option")
 
 
-def new_game():
-    global game_state, game, irene, note_text, trail, game_time, hint
+def new_game(difficulty):
+    global game_state, game, irene, note_text, trail, game_time, hint, score_multiplier, score
     # Speakers, No-clues, Containers, Keys, (add ciphers/puzzles)
     game = [[[None for i in range(5)] for j in range(5)] for k in range(5)]
     choices = []
@@ -85,7 +89,9 @@ def new_game():
     # Generate clue trail
     random.shuffle(choices)
     trail = []
-    for i in range(len(choices[:2])):  # Make random based on difficulty
+    # Random based on difficulty
+    length = [random.randint(5, 10), random.randint(10, 17)][difficulty]
+    for i in range(len(choices[:length])):
         choice = choices[i]
         key_type = choice[0]
         logging.warning(f"Prev: {prev}")
@@ -126,7 +132,9 @@ def new_game():
     hint = trail[0]
     logging.warning(f"Trail starts at {ROOM_NAMES[prev[1]][prev[0]]}")
     logging.warning(trail)
-    game_time = 360  # Make random based on difficulty
+    game_time = [300, 150][difficulty] + random.randint(-30,30)
+    score_multiplier = [EASY_MULTIPLY, HARD_MULTIPLY][difficulty]
+    score = 0
     game_state = True
 
 
@@ -145,11 +153,11 @@ def display(pos):
             else:
                 string += "_|" 
         if y == 0:
-            string += f'     Time: {game_time//60}h {game_time%60}m left'
+            string += f'     Time: {game_time//60}h {game_time%60}m left   Current Score: {score}'
         print(string)
 
 def action_menu():
-    global pos, game, inventory, game_time, game_loop, hint, trail
+    global pos, game, inventory, game_time, game_loop, hint, trail, score, score_multiplier
     # Print Map and Time remaining
     if game_time <= 0:
         print("You have run out of game_time!")
@@ -187,7 +195,8 @@ def action_menu():
     elif ans == 'h':
         x = False
         # Decrease difficulty modifier
-        print(hint)
+        score_multiplier *= 0.9
+        print(f"Action: {hint[0]} in {ROOM_NAMES[hint[1][1]][hint[1][0]]}")
     # Check if irene search
     elif ans == 'i' and pos in POSSIBLE_IRENE:
         x = False
@@ -201,15 +210,15 @@ def action_menu():
                 # Do action
                 match (actions[y][0]):
                     case 0: # Speak
-                        game_time -= SPEAK_TIME
+                        game_time -= int(SPEAK_TIME * score_multiplier)
                         print(f"Selected - {actions[y][1][0]}")
                         print(f"{actions[y][1][1]} {actions[y][1][2]}") # Add formatting for clue
                     case 1: # Non-clue
-                        game_time -= NON_TIME
+                        game_time -= int(NON_TIME * score_multiplier)
                         print(f"Selected - {actions[y][1][0]}")
                         print(f"{random.choice(actions[y][1][1])}")
                     case 2: # Container
-                        game_time -= CONT_TIME
+                        game_time -= int(CONT_TIME * score_multiplier)
                         print(f"Selected - {actions[y][1][0]}")
                         if actions[y][1][-1] in inventory:
                             print(actions[y][1][2])
@@ -225,32 +234,38 @@ def action_menu():
                         else:
                             print(actions[y][1][1])
                     case 3: # Keys
-                        game_time -= KEY_TIME
+                        game_time -= int(KEY_TIME * score_multiplier)
                         print(f"Selected - {actions[y][1][0]}")
                         print(actions[y][1][1])
                         inventory.append(actions[y][1][2])
                         print("Item added to inventory")
                         game[pos[0]][pos[1]][3].pop(0) # Remove container from room
                     case 4: # Cipher
-                        game_time -= CIPHER_TIME
+                        game_time -= int(CIPHER_TIME * score_multiplier)
                         print(f"Selected - {actions[y][1][0]}")
                         note_print(actions[y][1][1])
                 # Check if room and action is next hint
-                if actions[y][1][1] == hint[0] and pos == hint[1]:
+                logging.warning(f"action {actions[y][1][0]} hint {hint[0]}")
+                logging.warning(f"action room {pos} hint room {hint[1]}")
+                if actions[y][1][0] == hint[0] and pos == hint[1]:
                     # Remove hint from hint list
                     trail.pop(0)
                     # Set new hint from hint list
-                    hint = trail[0]
+                    if len(trail) >= 1:
+                        hint = trail[0]
+                    else:
+                        hint = ["Check Irene", irene]
                     # Add to score
+                    score += int(NEXT_STEP_SCORE * score_multiplier)
             else:
                 raise Exception("Out of action range")
         except BaseException as exception_error: # For debug purposes
             logging.exception(exception_error)
-            print(f"Not a valid input! Wasted {ERR_TIME} minutes")
-            game_time -= ERR_TIME
+            print(f"Not a valid input! Wasted {int(ERR_TIME * score_multiplier)} minutes")
+            game_time -= int(ERR_TIME * score_multiplier)
     # Move if input was movement
     if x:
-        game_time -= MOVE_TIME
+        game_time -= int(MOVE_TIME * score_multiplier)
         pos[index] += change
         print(f"Moved {direction} to {ROOM_NAMES[pos[1]][pos[0]]}")
     # Wait for user
@@ -260,10 +275,12 @@ def action_menu():
 
 
 def check_irene(pos):
-    global game_time
+    global game_time, score
     if pos == irene:
         print(f"You have found the elusive Irene Indiana! There were {game_time//60}h {game_time%60}m to spare")
         # Calculate score
+        score += int(IRENE_SCORE * score_multiplier)
+        score += int(game_time * TIME_SCORE * score_multiplier)
         print(f"Score: {0}")
         logging.warning(f"game_time: {game_time}")
         # Actually win
@@ -273,7 +290,7 @@ def check_irene(pos):
 
 
 def note_print(x):
-    global game_time
+    global game_time, score
     print("\n - Encrypted Note - \n")
     start_time = time.time()
     a = random.randint(0,3)
@@ -335,6 +352,7 @@ def note_print(x):
         if x == text.lower().strip():
             total_time = time.time() - start_time
             print(f"Code cracked in {round(total_time)} seconds!")
+            score += int(CODE_SCORE * score_multiplier )
             total_time = int(total_time / 6)
             print(f"{total_time} minutes have passed")
             game_time -= total_time
@@ -466,6 +484,12 @@ NON_TIME = 5
 SPEAK_TIME = 5
 MOVE_TIME = 5
 IRENE_TIME = 40
+HARD_MULTIPLY = 2.5
+EASY_MULTIPLY = 1
+NEXT_STEP_SCORE = 50
+CODE_SCORE = 10
+IRENE_SCORE = 1000
+TIME_SCORE = 1
 
 # Variables
 pos = [4, 0]
@@ -476,6 +500,8 @@ irene = [0,0]
 note_text = {}
 game_time = 0
 hint = []
+score_multiplier = 1
+score = 0
 
 
 game_state = False
