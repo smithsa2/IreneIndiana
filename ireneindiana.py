@@ -5,6 +5,8 @@
 # The computer game "Where in onslow college is Irene Indiana?"
 
 import logging
+
+import time
 import os
 import random
 
@@ -41,7 +43,7 @@ def main_menu():
 
 
 def new_game():
-    global game_state, game, irene, note_text, trail, time
+    global game_state, game, irene, note_text, trail, game_time
     # Speakers, No-clues, Containers, Keys, (add ciphers/puzzles)
     game = [[[None for i in range(5)] for j in range(5)] for k in range(5)]
     choices = []
@@ -70,7 +72,13 @@ def new_game():
             choices.append([2, cipher])
             game[pos[0]][pos[1]][4] = cipher[0:]
             # Red Herring
-            note_text[cipher[1]] = f"Irene Indiana is at {ROOM_NAMES[random.randint(0,4)][random.randint(0,4)]}"
+            red_loc = ROOM_NAMES[random.randint(0,4)][random.randint(0,4)]
+            possible_herrings = ["Irene Indiana is at {}",
+                                 "Irene's at {}",
+                                 "Ms. Miller said Irene was at {}",
+                                 "I saw Irene at {}",
+                                 "Irene's got to be in {}"]
+            note_text[cipher[1]] = random.choice(possible_herrings).format(red_loc)
     # Place Irene
     irene = random.choice(POSSIBLE_IRENE)
     prev = irene
@@ -96,7 +104,14 @@ def new_game():
             pos = choice[1][3]
             trail.append(f"Loc: {ROOM_NAMES[pos[1]][pos[0]]}; Opt: {choice[1][0].title()}")
         elif key_type == 2: # Note/Cipher
-            note_text[choice[1][1]] = "Check {}".format(ROOM_NAMES[prev[1]][prev[0]])
+            note_loc = ROOM_NAMES[random.randint(0,4)][random.randint(0,4)]
+            possible_texts = ["Check near {}",
+                              "Perhaps she is at {}",
+                              "She might be near {}",
+                              "My friend saw her at {}",
+                              "I was at {} before and she was there",
+                              "I saw her friend at {}"]
+            note_text[choice[1][1]] = random.choice(possible_texts).format(note_loc)
             pos = choice[1][2]
             trail.append(f"Loc: {ROOM_NAMES[pos[1]][pos[0]]}; Opt: {choice[1][0]}")
         else:
@@ -105,7 +120,7 @@ def new_game():
     trail.reverse()
     logging.warning(f"Trail starts at {ROOM_NAMES[prev[1]][prev[0]]}")
     logging.warning(trail)
-    time = 360  # Make random based on difficulty
+    game_time = 360  # Make random based on difficulty
     game_state = True
 
 
@@ -124,14 +139,14 @@ def display(pos):
             else:
                 string += "_|" 
         if y == 0:
-            string += f'     Time: {time//60}h {time%60}m left'
+            string += f'     Time: {game_time//60}h {game_time%60}m left'
         print(string)
 
 def action_menu():
-    global pos, game, inventory, time, game_loop
+    global pos, game, inventory, game_time, game_loop
     # Print Map and Time remaining
-    if time <= 0:
-        print("You have run out of time!")
+    if game_time <= 0:
+        print("You have run out of game_time!")
         game_loop = False
         return
     print()
@@ -163,7 +178,8 @@ def action_menu():
     elif ans == 'd' and pos[0] < 4:
         index, change, direction = 0, 1, 'west'
     # Check if hint
-    if ans == 'h':
+    elif ans == 'h':
+        x = False
         # Decrease difficulty modifier
         print(hint)
     # Check if irene search
@@ -179,15 +195,15 @@ def action_menu():
                 # Do action
                 match (actions[y][0]):
                     case 0: # Speak
-                        time -= SPEAK_TIME
+                        game_time -= SPEAK_TIME
                         print(f"Selected - {actions[y][1][0]}")
                         print(f"{actions[y][1][1]} {actions[y][1][2]}") # Add formatting for clue
                     case 1: # Non-clue
-                        time -= NON_TIME
+                        game_time -= NON_TIME
                         print(f"Selected - {actions[y][1][0]}")
                         print(f"{random.choice(actions[y][1][1])}")
                     case 2: # Container
-                        time -= CONT_TIME
+                        game_time -= CONT_TIME
                         print(f"Selected - {actions[y][1][0]}")
                         if actions[y][1][-1] in inventory:
                             print(actions[y][1][2])
@@ -203,24 +219,25 @@ def action_menu():
                         else:
                             print(actions[y][1][1])
                     case 3: # Keys
-                        time -= KEY_TIME
+                        game_time -= KEY_TIME
                         print(f"Selected - {actions[y][1][0]}")
                         print(actions[y][1][1])
                         inventory.append(actions[y][1][2])
                         print("Item added to inventory")
                         game[pos[0]][pos[1]][3].pop(0) # Remove container from room
                     case 4: # Cipher
-                        time -= CIPHER_TIME
+                        game_time -= CIPHER_TIME
                         print(f"Selected - {actions[y][1][0]}")
-                        print(f"It reads: |{note_text[actions[y][1][1]]}|")
+                        note_print(actions[y][1][1])
             else:
                 raise Exception("Out of action range")
-        except:
+        except BaseException as exception_error: # For debug purposes
+            logging.exception(exception_error)
             print(f"Not a valid input! Wasted {ERR_TIME} minutes")
-            time -= ERR_TIME
+            game_time -= ERR_TIME
     # Move if input was movement
     if x:
-        time -= MOVE_TIME
+        game_time -= MOVE_TIME
         pos[index] += change
         print(f"Moved {direction} to {ROOM_NAMES[pos[1]][pos[0]]}")
     # Wait for user
@@ -230,15 +247,87 @@ def action_menu():
 
 
 def check_irene(pos):
-    global time
+    global game_time
     if pos == irene:
-        print(f"You have found the elusive Irene Indiana! There were {time//60}h {time%60}m to spare")
+        print(f"You have found the elusive Irene Indiana! There were {game_time//60}h {game_time%60}m to spare")
         print(f"Score: {0}")
-        logging.warning(f"time: {time}")
+        logging.warning(f"game_time: {game_time}")
         # Actually win
     else:
         print(f"You searched for Irene, but it seems she is not here. You wasted {IRENE_TIME} minutes")
-        time -= IRENE_TIME
+        game_time -= IRENE_TIME
+
+
+def note_print(x):
+    global game_time
+    print("\n - Encrypted Note - \n")
+    start_time = time.time()
+    a = random.randint(0,3)
+    text = note_text[x]
+    words = text.split(" ")
+    new_string = []
+    if a == 0:  # Scramble words in place
+        for word in words:
+            b = [char for char in word]
+            random.shuffle(b)
+            new_string.append("".join(b))
+        print("Hint: Scrambled eggs")
+    elif a == 1:  # Fill in the blanks
+        letters = ""
+        for word in words:
+            b = ""
+            for char in word:
+                if random.randint(0,4) == 0:
+                    letters += char
+                    b += "_"
+                else:
+                    b += char
+            new_string.append(b)
+        letters = [char for char in letters]
+        random.shuffle(letters)
+        letters = "".join(letters)
+        print(f"Hint: Some of the letters must have fallen off '{letters}'")
+    elif a == 2:  #  
+        alpha = "abcdefghijklmnopqrstuvwxyz"
+        for word in words:
+            b = "|"
+            for char in word.lower():
+                if char in alpha:
+                    b += str(alpha.index(char) + 1) + '|'
+                else:
+                    b += char + '|'
+            new_string.append(b)
+        print("Hint: I thought these would be letters")
+    else:
+        alpha = sorted("".join(words).lower())
+        i = 0
+        while i <len(alpha):
+            if i != 0 and alpha[i] == alpha[i-1]:
+                alpha.pop(i)
+            else:
+                i += 1
+        for word in words:
+            b = "|"
+            for char in word.lower():
+                b += str(alpha.index(char) + 1) + '|'
+            new_string.append(b)
+        alpha = [f"{i+1}:{alpha[i]}" for i in range(len(alpha))]
+        print(f"Hint: {' '.join(alpha)}")
+    new_string = " ".join(new_string)
+    print(f"\n{new_string}\n")
+    print("Enter decrypted string: ")
+    while True:
+        x = input("> ").lower().strip()
+        if x == text.lower().strip():
+            total_time = time.time() - start_time
+            print(f"Code cracked in {round(total_time)} seconds!")
+            total_time = int(total_time / 6)
+            print(f"{total_time} minutes have passed")
+            game_time -= total_time
+            break
+        else:
+            print("Incorrect. Enter the decrypted string")
+
 
 
 # Constants
@@ -371,7 +460,7 @@ game = []
 inventory = []
 irene = [0,0]
 note_text = {}
-time = 0
+game_time = 0
 hint = []
 
 
