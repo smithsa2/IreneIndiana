@@ -229,7 +229,7 @@ def action_menu():
                             else:
                                 print("You found a note (added to inventory)")
                                 inventory.append(actions[y][1][4]) # Pickup item
-                                print(f"It reads: |{note_text[actions[y][1][4]]}|")
+                                print(f"It reads: |{note_text[actions[y][1][3]]}|")
                             actions.pop(y)
                         else:
                             print(actions[y][1][1])
@@ -281,7 +281,7 @@ def check_irene(pos):
         # Calculate score
         score += int(IRENE_SCORE * score_multiplier)
         score += int(game_time * TIME_SCORE * score_multiplier)
-        print(f"Score: {0}")
+        print(f"Score: {score}")
         logging.warning(f"game_time: {game_time}")
         # Actually win
     else:
