@@ -20,10 +20,9 @@ def main_menu():
 ======================
 
 1) New Game
-2) Stats
-3) Credits
-4) Help & Tutorials
-5) Quit""")
+2) Credits
+3) Help & Tutorials
+4) Quit""")
     user_input = input("> ").strip().lower()
     if user_input == '1':
         x = input("Easy (1) or Hard (2): \n> ")
@@ -32,15 +31,10 @@ def main_menu():
             x = input("Easy (1) or Hard (2): \n> ").strip().lower()
         new_game(int(x)-1)
     elif user_input == '2':
-        if not os.path.exists("game_data/current_game.txt"):
-            print("No stats")
-        else:
-            print_stats()
-    elif user_input == '3':
         print(CREDITS)
-    elif user_input == '4':
+    elif user_input == '3':
         print(HELP)
-    elif user_input == '5':
+    elif user_input == '4':
         game_loop = False
     else:
         print("That wasn't an option")
@@ -90,7 +84,7 @@ def new_game(difficulty):
     random.shuffle(choices)
     trail = []
     # Random based on difficulty
-    length = [random.randint(5, 10), random.randint(10, 17)][difficulty]
+    length = [random.randint(3, 7), random.randint(7, 12)][difficulty]
     for i in range(len(choices[:length])):
         choice = choices[i]
         key_type = choice[0]
@@ -110,7 +104,7 @@ def new_game(difficulty):
             note_text[choice[2][3]] = random.choice(possible_texts).format(note_loc)
             logging.warning(choice)
             pos = choice[2][4]
-            trail.append([choice[2][3], pos])
+            trail.append([choice[2][0], pos])
             pos = choice[1][3] # Direction of next hint is to key then container
             trail.append([choice[1][0], pos])
             pos = choice[2][4] # Direction of next clue is to container not to key
@@ -137,14 +131,11 @@ def new_game(difficulty):
         stringa.append(f"{item[0]} ({ROOM_NAMES[item[1][1]][item[1][0]]})")  # Debug
     stringa = ", ".join(stringa)  # Debug
     logging.warning(f"TRAIL PATH: \n{stringa}")
-    game_time = [300, 150][difficulty] + random.randint(-30,30)
+    game_time = [EASY_TIME, 400][difficulty] + random.randint(-30,30)
     score_multiplier = [EASY_MULTIPLY, HARD_MULTIPLY][difficulty]
     score = 0
     game_state = True
 
-
-def print_stats():
-    pass
 
 def display(pos):
     print(" _ _ _ _ _")
@@ -166,7 +157,7 @@ def action_menu():
     # Print Map and Time remaining
     if game_time <= 0:
         print("You have run out of game_time!")
-        game_state = False
+        #game_state = False  # Debug
         return
     print()
     display(pos)
@@ -178,6 +169,7 @@ def action_menu():
     print("(wasd) to move rooms")
     print("'h' to get a hint (will lower score)")
     print("'e' to open inventory")
+    print("'esc' to exit the game")
     actions = [[i, game[pos[0]][pos[1]][i]] for i in range(5) if game[pos[0]][pos[1]][i] is not None]
     #Print Actions
     for i in range(len(actions)):
@@ -196,6 +188,12 @@ def action_menu():
         index, change, direction = 0, -1, 'east'
     elif ans == 'd' and pos[0] < 4:
         index, change, direction = 0, 1, 'west'
+    elif ans == 'esc':
+        ans = input("Are you sure you want to leave? 'y'/'n':\n> ")
+        if ans == 'y':
+            game_state = False
+        else:
+            print("Returning to game")
     # Check if hint
     elif ans == 'h':
         x = False
@@ -490,12 +488,18 @@ NON_TIME = 5
 SPEAK_TIME = 5
 MOVE_TIME = 5
 IRENE_TIME = 40
+
 HARD_MULTIPLY = 2.5
 EASY_MULTIPLY = 1
+
 NEXT_STEP_SCORE = 50
 CODE_SCORE = 10
 IRENE_SCORE = 1000
 TIME_SCORE = 1
+
+# assuming roughly 40 minutes per room
+EASY_TIME = 300
+HARD_TIME = 400
 
 # Variables
 pos = [4, 0]
