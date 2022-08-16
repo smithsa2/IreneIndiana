@@ -131,7 +131,12 @@ def new_game(difficulty):
     trail.reverse()
     hint = trail[0]
     logging.warning(f"Trail starts at {ROOM_NAMES[prev[1]][prev[0]]}")
-    logging.warning(trail)
+    #logging.warning(trail)  # Debug
+    stringa = []  # Debug
+    for item in trail:  # Debug
+        stringa.append(f"{item[0]} ({ROOM_NAMES[item[1][1]][item[1][0]]})")  # Debug
+    stringa = ", ".join(stringa)  # Debug
+    logging.warning(f"TRAIL PATH: \n{stringa}")
     game_time = [300, 150][difficulty] + random.randint(-30,30)
     score_multiplier = [EASY_MULTIPLY, HARD_MULTIPLY][difficulty]
     score = 0
@@ -157,11 +162,11 @@ def display(pos):
         print(string)
 
 def action_menu():
-    global pos, game, inventory, game_time, game_loop, hint, trail, score, score_multiplier
+    global pos, game, inventory, game_time, game_state, hint, trail, score, score_multiplier
     # Print Map and Time remaining
     if game_time <= 0:
         print("You have run out of game_time!")
-        game_loop = False
+        game_state = False
         return
     print()
     display(pos)
@@ -275,7 +280,7 @@ def action_menu():
 
 
 def check_irene(pos):
-    global game_time, score
+    global game_time, score, game_state
     if pos == irene:
         print(f"You have found the elusive Irene Indiana! There were {game_time//60}h {game_time%60}m to spare")
         # Calculate score
@@ -284,6 +289,7 @@ def check_irene(pos):
         print(f"Score: {score}")
         logging.warning(f"game_time: {game_time}")
         # Actually win
+        game_state = False
     else:
         print(f"You searched for Irene, but it seems she is not here. You wasted {IRENE_TIME} minutes")
         game_time -= IRENE_TIME
