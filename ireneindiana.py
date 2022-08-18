@@ -63,7 +63,7 @@ def new_game(difficulty):
     choices = []
     # Speakers
     for speaker in POSSIBLE_SPEAK:
-        if random.random() > SPEAK_CHANCE[difficulty]:
+        if random.random() < SPEAK_CHANCE[difficulty]:
             choices.append([0, speaker])
             game[speaker[3][0]][speaker[3][1]][0] = speaker[0:3]
             # Red herring
@@ -73,13 +73,13 @@ def new_game(difficulty):
         game[non_clue[2][0]][non_clue[2][1]][1] = non_clue[0:2]
     # Containers and their keys
     for container in POSSIBLE_CONTAINER:
-        if random.random() > CONTAINER_CHANCE[difficulty]:
+        if random.random() < CONTAINER_CHANCE[difficulty]:
             key = container[-1]
             choices.append([1, key, container[0:-1]+[key[2]]])
             game[container[4][0]][container[4][1]][2] = container[0:-2]+[key[2]]
             game[key[3][0]][key[3][1]][3] = key[0:3]
     for cipher in POSSIBLE_CIPHER:  # Make list of all rooms and shuffle them.
-        if random.random() > CIPHER_CHANCE[difficulty]:
+        if random.random() < CIPHER_CHANCE[difficulty]:
             apos = [random.randint(0, 4), random.randint(0, 4)]
             cipher.append(apos)
             choices.append([2, cipher])
@@ -94,6 +94,7 @@ def new_game(difficulty):
             note_text[cipher[1]] = random.choice(possible_herrings).format(red_loc)
     # Place Irene
     irene = random.choice(POSSIBLE_IRENE)
+    logging.warning(f"Irene loc: {irene}")
     prev = irene
     # Generate clue trail
     random.shuffle(choices)
@@ -146,18 +147,18 @@ def new_game(difficulty):
         stringa.append(f"{item[0]} ({ROOM_NAMES[item[1][1]][item[1][0]]})")  # Debug
     stringa = ", ".join(stringa)  # Debug
     logging.warning(f"TRAIL PATH: \n{stringa}")
-    game_time = [EASY_TIME, 400][difficulty] + random.randint(-30, 30)
+    game_time = [EASY_TIME, HARD_TIME][difficulty] * (len(trail) + 1) + random.randint(-TIME_RANGE, TIME_RANGE)
     stats[0] += game_time
     score_multiplier = [EASY_MULTIPLY, HARD_MULTIPLY][difficulty]
     score = 0
     # Randomize time-slowing crossiant location
-    crossiant = [random.randint(0, 5), random.randint(0, 5)]
+    crossiant = [[random.randint(0, 5), random.randint(0, 5)], True]
     game_state = True
 
 
 def display(pos):
     print(" _ _ _ _ _")
-    for y in range(5, -1, -1):
+    for y in range(4, -1, -1):
         string = "|"
         for x in range(5):
             if [x, y] == pos:
@@ -226,11 +227,12 @@ def action_menu():
         stats[5] += 1
         write_stats()
         return
-    if pos == crossiant:
+    if pos == crossiant[0] and crossiant[1]:
+        crossiant[1] = False
         print("Congratulations! You have found the mysterious time slowing croissant")
         inventory.append('croissant')
-        stats[0] += game_time - int(game_time * 1.5)
-        game_time = int(game_time * 1.5)
+        stats[0] += int(game_time * 1.2) - game_time
+        game_time = int(game_time * 1.2)
         print("Item added to inventory")
         # Wait for user
         input("    Enter to Continue")
@@ -270,6 +272,7 @@ def action_menu():
         if ans == 'y':
             stats = [0, 0, 0, 0, 0, 0]
             game_state = False
+            return
         else:
             print("Returning to game")
     # Check if hint
@@ -300,16 +303,7 @@ def action_menu():
         x = False
         try:
             y = int(ans) - 1
-            print("""
-Actions:
-(wasd) to move rooms
-1)  - Talk to hooded kid
-2)  - Note2
-3)  - Note3
-4)  - Note9
-
-> 4""")
-            if y >= 0 and y < len(actions)-1:
+            if y >= 0 and y < len(actions):
                 # Do action
                 match(actions[y][0]):
                     case 0:  # Speak
@@ -380,11 +374,13 @@ Actions:
 def check_irene(pos):
     global game_time, score, game_state, stats
     if pos == irene:
-        print(f"You have found the elusive Irene Indiana! There were {game_time//60}h {game_time%60}m to spare")
+        print("=" * 76 + "\n")
+        print(f"    You have found the elusive Irene Indiana! There were {game_time//60}h {game_time%60}m to spare")
         # Calculate score
         score += int(IRENE_SCORE * score_multiplier)
         score += int(game_time * TIME_SCORE * score_multiplier)
-        print(f"Score: {score}")
+        print(f"                                    Score: {score}")
+        print("\n" + "=" * 76 + "\n")
         logging.warning(f"game_time: {game_time}")
         # Actually win
         stats[0] -= game_time
@@ -405,33 +401,37 @@ def note_print(x):
     # Maths Mode
     if random.randint(0,2) == 0:
         if random.randint(0,1) == 0:  # Addition
-            if score_multiplier > EASY_MULTIPLY:
+            if score_multiplier <= EASY_MULTIPLY:
                 numbers = [random.randint(1,99) for i in range(2)]
             else:
                 numbers = [random.randint(100,999) for i in range(2)]
-            hint = f"{numbers[0]} + {numbers[1]} = "
+            hint = f"(esc to exit)\n{numbers[0]} + {numbers[1]} = "
             answer = sum(numbers)
         else:  # Multiplication
-            if score_multiplier > EASY_MULTIPLY:
+            if score_multiplier <= EASY_MULTIPLY:
                 numbers = [random.randint(2,16) for i in range(2)]
             else:
                 numbers = [random.randint(10,99) for i in range(2)]
-            hint = f"{numbers[0]} * {numbers[1]} = "
+            hint = f"(esc to exit)\n{numbers[0]} * {numbers[1]} = "
             answer = numbers[0] * numbers[1]
         while True:
             x = input(hint).strip().lower()
+            if ',' in x:
+                x = "".join(x.split(','))
             if x == str(answer):
                 total_time = time.time() - start_time
                 print(f"Code cracked in {round(total_time)} seconds!")
-                print(f"The note reads |{note_text}|")
+                print(f"The note reads |{text}|")
                 stats[3] += 1
                 score += int(CODE_SCORE * score_multiplier)
                 total_time = int(total_time / 6)
                 print(f"{total_time} minutes have passed")
                 game_time -= total_time
                 return
+            elif x == 'esc':
+                return
             else:
-                print("That isn't quite right")
+                print("That isn't quite right.")
     # Word Mode
     if score_multiplier > EASY_MULTIPLY:
         a = random.randint(0, 3)
@@ -501,7 +501,7 @@ def note_print(x):
         print(f"Hint: {' '.join(alpha)}")
     new_string = " ".join(new_string)
     print(f"\n{new_string}\n")
-    print("Enter decrypted string: ")
+    print("Enter decrypted phrase (or 'esc' to exit): ")
     while True:
         x = input("> ").lower().strip()
         if x == text.lower().strip():
@@ -512,9 +512,11 @@ def note_print(x):
             total_time = int(total_time / 6)
             print(f"{total_time} minutes have passed")
             game_time -= total_time
-            break
+            return
+        elif x == 'esc':
+            return
         else:
-            print("Incorrect. Enter the decrypted string")
+            print("Incorrect. Enter the decrypted phrase")
 
 
 
@@ -712,9 +714,10 @@ CODE_SCORE = 10
 IRENE_SCORE = 1000
 TIME_SCORE = 1
 
-# assuming roughly 40 minutes per room
-EASY_TIME = 300
-HARD_TIME = 400
+# assuming roughly 40 minutes per room (if speedrunning on easy)
+EASY_TIME = 37
+HARD_TIME = 74
+TIME_RANGE = 30
 
 # Variables
 pos = [4, 0]
@@ -729,7 +732,7 @@ score_multiplier = 1
 score = 0
 # Time, moves, score, deciphers, errors, games
 stats = [0, 0, 0, 0, 0, 0]
-crossiant = [0,0]
+crossiant = [[0,0], False]
 
 game_state = False
 game_loop = True
