@@ -63,32 +63,35 @@ def new_game(difficulty):
     choices = []
     # Speakers
     for speaker in POSSIBLE_SPEAK:
-        choices.append([0, speaker])
-        game[speaker[3][0]][speaker[3][1]][0] = speaker[0:3]
-        # Red herring
-        game[speaker[3][0]][speaker[3][1]][0][2] = f"I haven't seen Irene, maybe she is at {ROOM_NAMES[random.randint(0,4)][random.randint(0,4)]}"
+        if random.random() > SPEAK_CHANCE[difficulty]:
+            choices.append([0, speaker])
+            game[speaker[3][0]][speaker[3][1]][0] = speaker[0:3]
+            # Red herring
+            game[speaker[3][0]][speaker[3][1]][0][2] = f"I haven't seen Irene, maybe she is at {ROOM_NAMES[random.randint(0,4)][random.randint(0,4)]}"
     # Non-Clues
     for non_clue in POSSIBLE_NON_CLUE:
         game[non_clue[2][0]][non_clue[2][1]][1] = non_clue[0:2]
     # Containers and their keys
     for container in POSSIBLE_CONTAINER:
-        key = container[-1]
-        choices.append([1, key, container[0:-1]+[key[2]]])
-        game[container[4][0]][container[4][1]][2] = container[0:-2]+[key[2]]
-        game[key[3][0]][key[3][1]][3] = key[0:3]
+        if random.random() > CONTAINER_CHANCE[difficulty]:
+            key = container[-1]
+            choices.append([1, key, container[0:-1]+[key[2]]])
+            game[container[4][0]][container[4][1]][2] = container[0:-2]+[key[2]]
+            game[key[3][0]][key[3][1]][3] = key[0:3]
     for cipher in POSSIBLE_CIPHER:  # Make list of all rooms and shuffle them.
-        apos = [random.randint(0, 4), random.randint(0, 4)]
-        cipher.append(apos)
-        choices.append([2, cipher])
-        game[apos[0]][apos[1]][4] = cipher[0:]
-        # Red Herring
-        red_loc = ROOM_NAMES[random.randint(0, 4)][random.randint(0, 4)]
-        possible_herrings = ["Irene Indiana is at {}",
-                             "Irene's at {}",
-                             "Ms. Miller said Irene was at {}",
-                             "I saw Irene at {}",
-                             "Irene's got to be in {}"]
-        note_text[cipher[1]] = random.choice(possible_herrings).format(red_loc)
+        if random.random() > CIPHER_CHANCE[difficulty]:
+            apos = [random.randint(0, 4), random.randint(0, 4)]
+            cipher.append(apos)
+            choices.append([2, cipher])
+            game[apos[0]][apos[1]][4] = cipher[0:]
+            # Red Herring
+            red_loc = ROOM_NAMES[random.randint(0, 4)][random.randint(0, 4)]
+            possible_herrings = ["Irene Indiana is at {}",
+                                "Irene's at {}",
+                                "Ms. Miller said Irene was at {}",
+                                "I saw Irene at {}",
+                                "Irene's got to be in {}"]
+            note_text[cipher[1]] = random.choice(possible_herrings).format(red_loc)
     # Place Irene
     irene = random.choice(POSSIBLE_IRENE)
     prev = irene
@@ -297,7 +300,16 @@ def action_menu():
         x = False
         try:
             y = int(ans) - 1
-            if y >= 0 and y < len(actions):
+            print("""
+Actions:
+(wasd) to move rooms
+1)  - Talk to hooded kid
+2)  - Note2
+3)  - Note3
+4)  - Note9
+
+> 4""")
+            if y >= 0 and y < len(actions)-1:
                 # Do action
                 match(actions[y][0]):
                     case 0:  # Speak
@@ -389,11 +401,42 @@ def note_print(x):
     global game_time, score, stats
     print("\n - Encrypted Note - \n")
     start_time = time.time()
+    text = note_text[x]
+    # Maths Mode
+    if random.randint(0,2) == 0:
+        if random.randint(0,1) == 0:  # Addition
+            if score_multiplier > EASY_MULTIPLY:
+                numbers = [random.randint(1,99) for i in range(2)]
+            else:
+                numbers = [random.randint(100,999) for i in range(2)]
+            hint = f"{numbers[0]} + {numbers[1]} = "
+            answer = sum(numbers)
+        else:  # Multiplication
+            if score_multiplier > EASY_MULTIPLY:
+                numbers = [random.randint(2,16) for i in range(2)]
+            else:
+                numbers = [random.randint(10,99) for i in range(2)]
+            hint = f"{numbers[0]} * {numbers[1]} = "
+            answer = numbers[0] * numbers[1]
+        while True:
+            x = input(hint).strip().lower()
+            if x == str(answer):
+                total_time = time.time() - start_time
+                print(f"Code cracked in {round(total_time)} seconds!")
+                print(f"The note reads |{note_text}|")
+                stats[3] += 1
+                score += int(CODE_SCORE * score_multiplier)
+                total_time = int(total_time / 6)
+                print(f"{total_time} minutes have passed")
+                game_time -= total_time
+                return
+            else:
+                print("That isn't quite right")
+    # Word Mode
     if score_multiplier > EASY_MULTIPLY:
         a = random.randint(0, 3)
     else:
         a = random.randint(0, 1)
-    text = note_text[x]
     words = text.split(" ")
     new_string = []
     if a == 0:  # Scramble words in place
@@ -660,6 +703,9 @@ IRENE_TIME = 40
 
 HARD_MULTIPLY = 2.5
 EASY_MULTIPLY = 1
+SPEAK_CHANCE = [0.5, 0.9]
+CONTAINER_CHANCE = [0.8, 0.95]
+CIPHER_CHANCE = [0.4, 0.9]
 
 NEXT_STEP_SCORE = 50
 CODE_SCORE = 10
