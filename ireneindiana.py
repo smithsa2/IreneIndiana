@@ -502,9 +502,15 @@ def note_print(x):
 # Constants
 CREDITS = """
 
-===========================
+============================
     Made by Samuel Smith
-===========================
+============================
+
+ Testers:
+   - Louis Oliver
+   - Aidan Spence
+   - Alex Hay
+   - Sarah Griffiths
 
 """
 
