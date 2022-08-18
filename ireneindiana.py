@@ -4,8 +4,6 @@
 # Samuel Smith
 # The computer game "Where in onslow college is Irene Indiana?"
 
-import logging
-
 import time
 import os
 import random
@@ -94,7 +92,6 @@ def new_game(difficulty):
             note_text[cipher[1]] = random.choice(possible_herrings).format(red_loc)
     # Place Irene
     irene = random.choice(POSSIBLE_IRENE)
-    logging.warning(f"Irene loc: {irene}")
     prev = irene
     # Generate clue trail
     random.shuffle(choices)
@@ -104,8 +101,6 @@ def new_game(difficulty):
     for i in range(len(choices[:length])):
         choice = choices[i]
         key_type = choice[0]
-        logging.warning(f"Prev: {prev}")
-        logging.warning(f"Choice: {choice}")
         if key_type == 0:  # Speaker
             # Make dialogue/solution contain clue
             apos = choice[1][-1]
@@ -118,7 +113,6 @@ def new_game(difficulty):
                               "She might be near {}",
                               "She often hangs out around {}"]
             note_text[choice[2][3]] = random.choice(possible_texts).format(note_loc)
-            logging.warning(choice)
             apos = choice[2][4]
             trail.append([choice[2][0], apos])
             apos = choice[1][3]  # Direction of next hint is to key then container
@@ -140,13 +134,6 @@ def new_game(difficulty):
         prev = apos
     trail.reverse()
     hint = trail[0]
-    logging.warning(f"Trail starts at {ROOM_NAMES[prev[1]][prev[0]]}")
-    # logging.warning(trail)  # Debug
-    stringa = []  # Debug
-    for item in trail:  # Debug
-        stringa.append(f"{item[0]} ({ROOM_NAMES[item[1][1]][item[1][0]]})")  # Debug
-    stringa = ", ".join(stringa)  # Debug
-    logging.warning(f"TRAIL PATH: \n{stringa}")
     game_time = [EASY_TIME, HARD_TIME][difficulty] * (len(trail) + 1) + random.randint(-TIME_RANGE, TIME_RANGE)
     stats[0] += game_time
     score_multiplier = [EASY_MULTIPLY, HARD_MULTIPLY][difficulty]
@@ -193,8 +180,7 @@ def print_stats():
                 x = file[4].split(' = ')[1][0:-1]
                 print(f"Total mistyped commands: {x} (per game avg. {round(int(x)/games,2)})")
                 print(f"Total games played: {int(games)} (per game avg. 1)")
-        except BaseException as exception_error: # For debug purposes
-            logging.exception(exception_error)
+        except:
             print("User stats file is corrupt. Reinstall it")
 
 
@@ -213,8 +199,7 @@ def write_stats():
             with open("game_data/user_stats.txt", 'w') as file:
                 file.write(f"TOTAL_TIME = {x[0]}\nTOTAL_MOVES = {x[1]}\nTOTAL_SCORE = {x[2]}\nTOTAL_DECIPHERS = {x[3]}\nTOTAL_ERRORS = {x[4]}\nGAMES_PLAYED = {x[5]}")
             stats = [0, 0, 0, 0, 0, 0]
-        except BaseException as exception_error: # For debug purposes
-            logging.exception(exception_error)
+        except:
             print("User stats file is corrupt. Reinstall it.")
 
 
@@ -223,7 +208,7 @@ def action_menu():
     # Print Map and Time remaining
     if game_time <= 0:
         print("You have run out of game_time!")
-        game_state = False  # Debug
+        game_state = False
         stats[5] += 1
         write_stats()
         return
@@ -319,8 +304,6 @@ def action_menu():
                         print(f"Selected - {actions[y][1][0]}")
                         if actions[y][1][-1] in inventory:
                             print(actions[y][1][2])
-                            logging.warning(f"AAAAAAAAARGHHH: {actions[y]}")
-                            logging.warning(f"NOTEEESSS: {note_text}")
                             # Do container action
                             print("You found a note (added to inventory)")
                             inventory.append(actions[y][1][3]) # Pickup item
@@ -340,8 +323,6 @@ def action_menu():
                         print(f"Selected - {actions[y][1][0]}")
                         note_print(actions[y][1][1])
                 # Check if room and action is next hint
-                logging.warning(f"action {actions[y][1][0]} hint {hint[0]}")
-                logging.warning(f"action room {pos} hint room {hint[1]}")
                 if actions[y][1][0] == hint[0] and pos == hint[1]:
                     # Remove hint from hint list
                     trail.pop(0)
@@ -354,8 +335,7 @@ def action_menu():
                     score += int(NEXT_STEP_SCORE * score_multiplier)
             else:
                 raise Exception("Out of action range")
-        except BaseException as exception_error: # For debug purposes
-            logging.exception(exception_error)
+        except:
             print(f"Not a valid input! Wasted {int(ERR_TIME * score_multiplier)} minutes")
             stats[4] += 1
             game_time -= int(ERR_TIME * score_multiplier)
@@ -381,7 +361,6 @@ def check_irene(pos):
         score += int(game_time * TIME_SCORE * score_multiplier)
         print(f"                                    Score: {score}")
         print("\n" + "=" * 76 + "\n")
-        logging.warning(f"game_time: {game_time}")
         # Actually win
         stats[0] -= game_time
         stats[5] += 1
